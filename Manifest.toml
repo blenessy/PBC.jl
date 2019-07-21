@@ -1,0 +1,24 @@
+# This file is machine-generated - editing it directly is not advised
+
+[[BinaryProvider]]
+deps = ["Libdl", "Logging", "SHA"]
+git-tree-sha1 = "c7361ce8a2129f20b0e05a89f7070820cfed6648"
+uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
+version = "0.5.6"
+
+[[Libdl]]
+uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+
+[[Logging]]
+uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[RelicToolkit]]
+deps = ["BinaryProvider", "Libdl"]
+git-tree-sha1 = "bf385a4a3ccb7b503c8d2b23e167d40b13688048"
+repo-rev = "master"
+repo-url = "../RelicToolkit.jl"
+uuid = "976a8074-9f4c-11e9-1019-17da4c65f546"
+version = "0.4.0-613-g613795f7-1"
+
+[[SHA]]
+uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
