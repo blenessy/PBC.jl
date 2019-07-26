@@ -1,7 +1,7 @@
 module PerfTests
 
 using BenchmarkTools
-using BLS381
+using PBC
 
 BenchmarkTools.DEFAULT_PARAMETERS.samples = 1000
 BenchmarkTools.DEFAULT_PARAMETERS.seconds = 10
@@ -10,10 +10,23 @@ BenchmarkTools.DEFAULT_PARAMETERS.gctrial = true
 BenchmarkTools.DEFAULT_PARAMETERS.gcsample = false
 @show BenchmarkTools.DEFAULT_PARAMETERS
 
+Base.rand(::Type{PublicKey}) = PublicKey(rand(PBC.Config.@EP2))
+Base.rand(::Type{Signature}) = Signature(rand(PBC.Config.@EP))
+Base.rand(::Type{Hash}) = Hash(rand(PBC.Config.@EP))
+
+
+
 suite = BenchmarkGroup()
-suite["BL12381"] = BenchmarkGroup()
-suite["BL12381"]["PrivateKey()"] = @benchmarkable PrivateKey()
-suite["BL12381"]["PrivateKey(::Vector{UInt8})"] = @benchmarkable PrivateKey($(rand(UInt8, BLS381.PRIVATE_KEY_SIZE)))
+suite["PBC"] = BenchmarkGroup()
+suite["PBC"]["rand(PrivateKey)"] = @benchmarkable rand(PrivateKey)
+suite["PBC"]["PrivateKey(::Vector{UInt8})"] = @benchmarkable PrivateKey($(rand(UInt8, PBC.Config.PRIVATE_KEY_SIZE)))
+suite["PBC"]["PublicKey(::PrivateKey)"] = @benchmarkable PublicKey($(rand(PrivateKey)))
+suite["PBC"]["PublicKey(::Vector{UInt8})"] = @benchmarkable PublicKey($(Vector{UInt8}(rand(PublicKey))))
+suite["PBC"]["Vector{UInt8}(::PrivateKey)"] = @benchmarkable Vector{UInt8}($(rand(PrivateKey)))
+suite["PBC"]["Vector{UInt8}(::PublicKey)"] = @benchmarkable Vector{UInt8}($(rand(PublicKey)))
+suite["PBC"]["PBC.sign(::PrivateKey, ::Hash)"] = @benchmarkable PBC.sign($(rand(PrivateKey)), $(rand(Hash)))
+suite["PBC"]["PBC.verify(::Signature, ::PublicKey, ::Hash)"] = @benchmarkable PBC.verify($(rand(Signature)), $(rand(PublicKey)), $(rand(Hash)))
+suite["PBC"]["isvalid(::PrivateKey)"] = @benchmarkable isvalid($(rand(PrivateKey)))
 
 function format_trial(suite, group, res)
     a = allocs(res)

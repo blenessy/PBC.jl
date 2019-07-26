@@ -1,6 +1,13 @@
+CURVE ?= BLS381
+SMALL_SIGNATURES ?= n
+THREADS ?= 4
+
 .PHONY: test
 test: clean
-	julia --track-allocation=user -e 'import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
+	@echo "== Single Threaded =="
+	JULIA_DEBUG=PBC PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) julia --compiled-modules=no --track-allocation=user -e 'import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
+	@echo "== Multi Threaded =="
+	JULIA_DEBUG=PBC PBC_THREADS=$(THREADS) PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) julia --compiled-modules=no --track-allocation=user -e 'import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
 
 .PHONY: coverage
 coverage:
@@ -12,7 +19,7 @@ coverage:
 
 .PHONY: bench
 bench:
-	julia -e 'import Pkg; Pkg.activate("."); Pkg.test()'
+	PBC_THREADS=$(THREADS) PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) TEST=PerfTests julia --compiled-modules=no -e 'import Pkg; Pkg.activate("."); Pkg.test()'
 
 .PHONY: profile
 profile:
@@ -20,6 +27,4 @@ profile:
 
 .PHONY: clean
 clean:
-	@find . -type f -name '*.cov' -delete
-	@find . -type f -name '*.mem' -delete
-	@rm -rf ./test/coverage
+	git clean -fdX

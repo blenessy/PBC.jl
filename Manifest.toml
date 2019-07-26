@@ -6,19 +6,33 @@ git-tree-sha1 = "c7361ce8a2129f20b0e05a89f7070820cfed6648"
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
 version = "0.5.6"
 
+[[Distributed]]
+deps = ["Random", "Serialization", "Sockets"]
+uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+
 [[Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
+[[Random]]
+deps = ["Serialization"]
+uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
 [[RelicToolkit]]
 deps = ["BinaryProvider", "Libdl"]
-git-tree-sha1 = "bf385a4a3ccb7b503c8d2b23e167d40b13688048"
+git-tree-sha1 = "a4a1aacfd67a4041ac8b28aa10b04f595525db9f"
 repo-rev = "master"
-repo-url = "../RelicToolkit.jl"
+repo-url = "../RelicToolkit.jl/"
 uuid = "976a8074-9f4c-11e9-1019-17da4c65f546"
-version = "0.4.0-613-g613795f7-1"
+version = "0.2.0"
 
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+
+[[Serialization]]
+uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[Sockets]]
+uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
