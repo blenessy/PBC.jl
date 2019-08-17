@@ -18,7 +18,19 @@ function encode(point::Point)
     return buf
 end
 
-hash2curve(msg::Vector{UInt8}) = Curve.curve_map(Config.@EP, msg)
+function gensk()
+    # Throw away keys that are outside of the allowed key space
+    # (mod break the uniform key distribution)
+    while true
+        sk = rand(Curve.BN, bits=Config.PRIVATE_KEY_SIZE_BITS)
+        if sk < Config.ORDER
+            return sk
+        end
+    end
+end
+
+#hash2curve(msg::Vector{UInt8}) = Curve.curve_map(Config.@EP, msg)
+hash2curve(msg::Vector{UInt8}) = Curve.BN(Curve.md_sha256(msg)) * Config.G1
 
 sign(sk::Curve.BN, p::Point) = sk * p
-genpk(sk::Curve.BN) = sk * Config.GEN
+genpk(sk::Curve.BN) = sk * Config.G2

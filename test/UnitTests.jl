@@ -3,6 +3,82 @@ module UnitTests
 using Test
 using PBC
 
+using PBC.Curve: BN, FP, EP, EP2, curve_gen, LIB
+using PBC.Config: ORDER
+
+using PBC.Shamir: evalpoly, LagrangeCoeffGenerator, BarycentricWeightGenerator, lagrange_interpolate_c0
+
+
+@testset "lagrange_interpolate_c0 - trivial" begin
+    x = 1:2 # ids
+    for c in (BN(1), curve_gen(EP), curve_gen(EP2))
+        poly = [c, c] # derive secret coeffs from c
+        y = [evalpoly(poly, i) for i in x] # secret shares
+        @test y == [2c, 3c]
+        @test lagrange_interpolate_c0(BarycentricWeightGenerator, x, y) == c
+        @test lagrange_interpolate_c0(LagrangeCoeffGenerator, x, y) == c
+        @test lagrange_interpolate_c0(x, y) == c
+    end
+end
+
+@testset "Shamir: lagrange_interpolate_c0 - complex" begin
+    x = 1:5 # ids
+    n = length(x)
+    for c in (BN(123), 123 * curve_gen(EP), 123 * curve_gen(EP2))
+        poly = [c, 2c, 3c] # derive secret coeffs from c
+        t = length(poly)
+        y = [evalpoly(poly, i) for i in x]
+        for i in 1:n-t+1
+            r = i:i+t-1
+            @test lagrange_interpolate_c0(BarycentricWeightGenerator, x[r], y[r]) == c
+            @test lagrange_interpolate_c0(LagrangeCoeffGenerator, x[r], y[r]) == c
+            @test lagrange_interpolate_c0(x[r], y[r]) == c
+        end
+    end
+end
+
+@testset "Shamir: LagrangeCoeffGenerator" begin
+    coeffs = LagrangeCoeffGenerator()
+    # generate first coeff
+    @test push!(coeffs, 1) == BN(1)
+
+    # generate second coeff
+    @test push!(coeffs, 2) == ORDER - 1
+    @test push!(coeffs, 1) == BN(2)
+
+    # generate third share
+    @test push!(coeffs, 3) == BN(1)
+    @test push!(coeffs, 2) == ORDER - 3
+    @test push!(coeffs, 1) == BN(3)
+
+    # delete third share
+    delete!(coeffs, 3)
+    @test length(coeffs) == 2
+    @test push!(coeffs, 2) == ORDER - 1
+    @test push!(coeffs, 1) == BN(2)
+end
+
+@testset "Shamir: BarycentricWeightGenerator" begin
+    weights = BarycentricWeightGenerator()
+    # generate first coeff
+    @test push!(weights, 1) == ORDER - 1
+
+    # generate second coeff
+    @test push!(weights, 2) == BN(2)
+    @test push!(weights, 1) == ORDER - 1
+
+    # generate third share
+    @test push!(weights, 3) == ORDER - 6
+    @test push!(weights, 2) == BN(2)
+    @test push!(weights, 1) == ORDER - 2
+
+    # delete third share
+    delete!(weights, 3)
+    @test length(weights) == 2
+    @test push!(weights, 2) == BN(2)
+    @test push!(weights, 1) == ORDER - 1
+end
+
 @testset "PrivateKey" begin
     # generate random with default RNG
     @test rand(PrivateKey).sk < PBC.Config.PRIME
@@ -66,5 +142,13 @@ end
     @test_throws ErrorException PBC.verify(PBC.sign(sk, "foo"), [])
 end
 
+@testset "Shamir: evalpoly" begin
+    for c in (BN(123), curve_gen(EP), curve_gen(EP2))
+        poly = [c, 2c, 3c]
+        @test evalpoly(poly, 0) == c
+        @test evalpoly(poly, 1) == c + 2c + 3c
+        @test evalpoly(poly, 2) == c + 2c * 2 + 3c * 2^2
+    end
+end
 
 end

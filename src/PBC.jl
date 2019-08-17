@@ -1,11 +1,11 @@
 module PBC
-export PrivateKey, PublicKey, Signature, Hash
+export PrivateKey, PublicKey, Signature, Hash, Identity
 
 module Curve
     # load curve dynamically
     const CURVE = get(ENV, "RELIC_TOOLKIT_CURVE", "BLS381")
     eval(Meta.parse("using RelicToolkit.$CURVE"))
-    eval(Meta.parse("using RelicToolkit.$CURVE: bn_read_bin!, bn_write_bin!"))
+    eval(Meta.parse("using RelicToolkit.$CURVE: bn_read_bin!, bn_write_bin!, LIB, Limb"))
 end
 
 module Config
@@ -23,6 +23,14 @@ module Model
     include(joinpath(@__DIR__, "Model.jl"))
 end
 
+module Shamir
+    import ..Config, ..Curve, ..Model, ..Util
+
+    include(joinpath(@__DIR__, "LagrangeCoeffGenerator.jl"))
+    include(joinpath(@__DIR__, "BarycentricWeightGenerator.jl"))
+    include(joinpath(@__DIR__, "Shamir.jl"))
+end
+
 module Spawn
     import ..Config, ..Model, ..Curve
     abstract type SpawnProcesses end
@@ -33,10 +41,7 @@ module Spawn
     include(joinpath(@__DIR__, "Distributed.jl"))
 end
 
-const PrivateKey = Model.PrivateKey
-const PublicKey = Model.PublicKey
-const Signature = Model.Signature
-const Hash = Model.Hash
+using .Model: PrivateKey, PublicKey, Signature, Hash, Identity
 
 #sign(sk::PrivateKey, point::Util.Point) = sign(sk, Util.encode(point))
 sign(sk::PrivateKey, hash::Hash) = Signature(sk, hash)
@@ -116,20 +121,27 @@ Base.:(+)(a::Signature, b::Signature) = Signature(a.sig + b.sig)
 Base.:(-)(a::PublicKey, b::PublicKey) = PublicKey(a.pk - b.pk)
 Base.:(-)(a::Signature, b::Signature) = Signature(a.sig - b.sig)
 
-function Base.rand(::Type{PrivateKey})
-    # Throw away keys are are outside of the allowed key space
-    # (mod break the uniform key distribution)
-    while true
-        sk = PrivateKey(rand(Curve.BN, bits=Config.PRIVATE_KEY_SIZE_BITS))
-        isvalid(sk) && return sk
-        @debug "throwing away invalid private key"
-    end
-end
+Base.rand(::Type{PrivateKey}) = PrivateKey(Util.gensk())
 
 Base.:(==)(a::PrivateKey, b::PrivateKey) = a.sk == b.sk
 Base.:(==)(a::Model.AbstractPublicKey, b::Model.AbstractPublicKey) = a.pk == b.pk
-Base.:(==)(a::Signature, b::Signature) = a.pk == b.pk
+Base.:(==)(a::Signature, b::Signature) = a.sig == b.sig
 Base.:(==)(a::Hash, b::Hash) = a.hash == b.hash
+
+"""
+TODO: Given 10000 random Affline Points, there is a 1.16% chance of a conflict with this algo on a 32-bit system.
+
+Assuming that x in each point is a uniformly distributed Prime Field element, 
+then the probability of conflict can be calculated with (for 32-bit systems):
+
+P(conflict) = 1/k + 2/k + ... + (n-1)/k = 1/k * (n-1)^2/2; where k=big"2"^(8sizeof(UInt))
+
+Example: n = 10000; k=2^32 => P(conflict) = 1/2^32 * (10000 - 1)^2/2 = 9999^2 / 2^33 = 0.0116...
+
+"""
+Base.hash(point::Curve.EP) = point.x[1]
+Base.hash(point::Curve.EP2) = point.x[1][1]
+
 
 function __init__()
     if Spawn.OptimalSpawn == Spawn.SpawnProcesses

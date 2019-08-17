@@ -22,9 +22,9 @@ uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[RelicToolkit]]
 deps = ["BinaryProvider", "Libdl"]
-git-tree-sha1 = "a4a1aacfd67a4041ac8b28aa10b04f595525db9f"
+git-tree-sha1 = "98c0bfcef9dea5dd482d365dc6dcfe1b8db59c61"
 repo-rev = "master"
-repo-url = "../RelicToolkit.jl/"
+repo-url = "../RelicToolkit.jl"
 uuid = "976a8074-9f4c-11e9-1019-17da4c65f546"
 version = "0.2.0"
 

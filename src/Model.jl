@@ -1,14 +1,21 @@
-struct PrivateKey
-    sk::Curve.BN
-    PrivateKey(sk::Curve.BN) = new(sk)
+using .Curve: BN, FP, bn_read_bin!
+
+abstract type AbstractPrivateKey end
+struct PrivateKey <: AbstractPrivateKey
+    sk::BN
+    PrivateKey(sk) = PrivateKey(BN(sk))
+    function PrivateKey(sk::BN)
+        safesk = mod(sk, Config.ORDER)
+        safesk == sk || @warn "Unsafe private key detected"
+        return new(safesk)
+    end
     function PrivateKey(bytes::Vector{UInt8})
         length(bytes) >= Config.PRIVATE_KEY_SIZE || @warn "Weak private key used"
-        return new(Curve.bn_read_bin!(Curve.BN(), bytes))
+        return PrivateKey(bn_read_bin!(BN(), bytes))
     end
 end
 
 abstract type AbstractPublicKey end
-
 struct PublicKey <: AbstractPublicKey
     pk::Config.@EP2
     PublicKey(pk::Config.@EP2) = new(pk)
@@ -34,14 +41,25 @@ struct SignedPublicKey <: AbstractPublicKey
     end
 end
 
-struct Hash
+abstract type AbstractIdentity end
+struct Identity <: AbstractIdentity
+    id::FP
+    Identity(x) = Identity(FP(x))
+    Identity(id::FP) = new(id)
+    Identity(pk::PublicKey) = Identity(BN(Vector{UInt8}(pk.pk)))
+end
+
+
+abstract type AbstractHash end
+struct Hash <: AbstractHash
     hash::Config.@EP
     Hash(hash::Config.@EP) = new(hash)
     Hash(msg::Vector{UInt8}) = Hash(Util.hash2curve(msg))
     Hash(msg::String) = Hash(Vector{UInt8}(msg))
 end
 
-struct Signature
+abstract type AbstractSignature end
+struct Signature <: AbstractSignature
     sig::Config.@EP
     Signature(sig::Config.@EP) = new(sig)
     Signature(sk::PrivateKey, hash::Hash) = Signature(Util.sign(sk.sk, hash.hash))

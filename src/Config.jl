@@ -7,9 +7,10 @@ macro EP2()
     return SMALL_SIGNATURES ? :(Curve.EP2) : :(Curve.EP)
 end
 
-const GEN = Curve.curve_gen(@EP2)
-const PUBLIC_KEY_SIZE = sizeof(GEN.x)
-const SIGNATURE_SIZE = sizeof(Curve.curve_gen(@EP).x)
+const G1 = Curve.curve_gen(@EP)
+const G2 = Curve.curve_gen(@EP2)
+const PUBLIC_KEY_SIZE = sizeof(G2.x)
+const SIGNATURE_SIZE = sizeof(G1.x)
 
 const PRIME = Curve.fp_prime_get()
 const ORDER = Curve.curve_order(@EP)
