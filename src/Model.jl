@@ -42,13 +42,12 @@ struct SignedPublicKey <: AbstractPublicKey
 end
 
 abstract type AbstractIdentity end
-struct Identity <: AbstractIdentity
-    id::FP
-    Identity(x) = Identity(FP(x))
-    Identity(id::FP) = new(id)
-    Identity(pk::PublicKey) = Identity(BN(Vector{UInt8}(pk.pk)))
+struct Identity{T} <: AbstractIdentity
+    id::T
+    Identity(id::T) where {T<:Signed} = new{T}(T(id & typemax(T)))
+    Identity(::Type{T}, pk::PublicKey) where {T<:Signed} = Identity(T(pk.pk))
+    Identity(pk::PublicKey) = Identity(Int64(pk.pk))
 end
-
 
 abstract type AbstractHash end
 struct Hash <: AbstractHash

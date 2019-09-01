@@ -46,18 +46,18 @@ This version only cares about finding the secret coefficient (index 0) as fast a
 
 weights need to be pre-calculated with `updateweights!` before calling this function.
 """
-function lagrange_interpolate_c0(coeffs::LagrangeCoeffGenerator, shares::AbstractDict{Int64,T})  where {T}
+function lagrange_interpolate_c0(coeffs::LagrangeCoeffGenerator{K}, shares::AbstractDict{K,V})  where {K<:Signed,V}
     length(shares) >= 2 || error("need at least two shares")
-    c0 = zero(T)
+    c0 = zero(V)
     for (x, y) in shares
         c0 += coeffs[x] * y
     end
     return isa(c0, Point) ? c0 : mod(c0, ORDER)
 end
 
-function lagrange_interpolate_c0(weights::BarycentricWeightGenerator, shares::AbstractDict{Int64,T}) where {T}
+function lagrange_interpolate_c0(weights::BarycentricWeightGenerator{K}, shares::AbstractDict{K,V}) where {K<:Signed,V}
     length(shares) >= 2 || error("need at least two shares")
-    num, denom = zero(T), zero(BN)
+    num, denom = zero(V), zero(BN)
     for (x, y) in shares
         # optimisation: normally inv is done when calculating weights
         #w = invmod(weights[j], ORDER)
@@ -71,6 +71,6 @@ function lagrange_interpolate_c0(weights::BarycentricWeightGenerator, shares::Ab
     return isa(c0, Point) ? c0 : mod(c0, ORDER)
 end
 
-lagrange_interpolate_c0(::Type{T}, shares::AbstractDict{Int64,S}) where {S,T} = lagrange_interpolate_c0(T(keys(shares)), shares)
-lagrange_interpolate_c0(shares::AbstractDict{Int64,T}) where {T} = lagrange_interpolate_c0(LagrangeCoeffGenerator, shares)
+lagrange_interpolate_c0(shares::AbstractDict{K,V}) where {K<:Signed,V} =
+    lagrange_interpolate_c0(LagrangeCoeffGenerator(keys(shares)), shares)
 

@@ -4,37 +4,35 @@ using Test
 using PBC
 
 using PBC.Curve: BN, FP, EP, EP2, curve_gen, LIB
-using PBC.Config: ORDER
-using PBC.Util: index
-
+using PBC.Config: ORDER, G1, G2
 using PBC.Shamir: evalpoly, LagrangeCoeffGenerator, BarycentricWeightGenerator, lagrange_interpolate_c0
 
 
 @testset "lagrange_interpolate_c0 - trivial" begin
-    for idtype in (EP, EP2)
-        ids = (rand(idtype), rand(idtype))
+    for idtype in (Int64, Int128)
+        ids = [idtype(i) for i in 1:2]
         for c in (BN(1), curve_gen(EP), curve_gen(EP2))
             poly = [c, c] # derive secret coeffs from c
-            shares = Dict(index(id)=>evalpoly(poly, index(id)) for id in ids)
-            @test lagrange_interpolate_c0(BarycentricWeightGenerator, shares) == c
-            @test lagrange_interpolate_c0(LagrangeCoeffGenerator, shares) == c
+            shares = Dict(x=>evalpoly(poly, x) for x in ids)
+            @test lagrange_interpolate_c0(BarycentricWeightGenerator(keys(shares)), shares) == c
+            @test lagrange_interpolate_c0(LagrangeCoeffGenerator(keys(shares)), shares) == c
             @test lagrange_interpolate_c0(shares) == c
         end
     end
 end
 
 @testset "Shamir: lagrange_interpolate_c0 - complex" begin
-    for idtype in (EP, EP2)
-        ids = (rand(idtype), rand(idtype), rand(idtype), rand(idtype), rand(idtype))
+    for idtype in (Int64, Int128)
+        ids = [idtype(i) for i in 1:5]
         n = length(ids)
         for c in (BN(123), 123 * curve_gen(EP), 123 * curve_gen(EP2))
             poly = [c, 2c, 3c] # derive secret coeffs from c
-            shares = Dict(index(id)=>evalpoly(poly, index(id)) for id in ids)
             t = length(poly)
+            shares = Dict(x=>evalpoly(poly, x) for x in ids)
             for i in 1:n-t+1
                 r = i:i+t-1
-                @test lagrange_interpolate_c0(BarycentricWeightGenerator, shares) == c
-                @test lagrange_interpolate_c0(LagrangeCoeffGenerator, shares) == c
+                @test lagrange_interpolate_c0(BarycentricWeightGenerator(keys(shares)), shares) == c
+                @test lagrange_interpolate_c0(LagrangeCoeffGenerator(keys(shares)), shares) == c
                 @test lagrange_interpolate_c0(shares) == c
             end
         end
@@ -42,7 +40,7 @@ end
 end
 
 @testset "Shamir: LagrangeCoeffGenerator" begin
-    coeffs = LagrangeCoeffGenerator()
+    coeffs = LagrangeCoeffGenerator(Int64)
     # generate first coeff
     @test push!(coeffs, 1) == BN(1)
 
@@ -63,7 +61,7 @@ end
 end
 
 @testset "Shamir: BarycentricWeightGenerator" begin
-    weights = BarycentricWeightGenerator()
+    weights = BarycentricWeightGenerator(Int64)
     # generate first coeff
     @test push!(weights, 1) == ORDER - 1
 
@@ -81,14 +79,6 @@ end
     @test length(weights) == 2
     @test push!(weights, 2) == BN(2)
     @test push!(weights, 1) == ORDER - 1
-end
-
-@testset "hash of Points" begin
-    for i in 1:1000
-        p, q = rand(EP), rand(EP2)
-        @test !signbit(index(p))
-        @test !signbit(index(q))
-    end
 end
 
 @testset "PrivateKey" begin
@@ -120,6 +110,13 @@ end
 @testset "Hash" begin
     hash = Hash("foo")
     @test !isinf(hash) && isvalid(hash)
+end
+
+@testset "Identity" begin
+    for idtype in (Int64, Int128)
+        @test !signbit(Identity(idtype(-1)).id)
+        @test !iszero(Identity(idtype, PublicKey(PrivateKey(UInt8[1, 2, 3]))).id)
+    end
 end
 
 @testset "sign & verify" begin

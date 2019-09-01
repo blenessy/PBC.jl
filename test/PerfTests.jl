@@ -40,10 +40,13 @@ suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{
 suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{EP}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(EP) for i in x)))
 suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{EP2}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(EP2) for i in x)))
 
-suite["Shamir"]["LagrangeCoeffGenerator(1:501)"] = @benchmarkable LagrangeCoeffGenerator(1:501)
-suite["Shamir"]["BarycentricWeightGenerator(1:501)"] = @benchmarkable BarycentricWeightGenerator(1:501)
-suite["Shamir"]["LagrangeCoeffGenerator(1:1000) - delete 499 keys"] = @benchmarkable for i in 1:499; delete!(lc, i); end setup=(lc=LagrangeCoeffGenerator(x))
-suite["Shamir"]["BarycentricWeightGenerator(1:1000) - delete 499 keys"] = @benchmarkable for i in 1:499; delete!(lc, i); end setup=(lc=BarycentricWeightGenerator(x))
+suite["Shamir"]["LagrangeCoeffGenerator(1:501) - Int64"] = @benchmarkable LagrangeCoeffGenerator($(1:501))
+suite["Shamir"]["LagrangeCoeffGenerator(1:501) - Int128"] = @benchmarkable LagrangeCoeffGenerator($([Int128(i) for i in 1:501]))
+suite["Shamir"]["BarycentricWeightGenerator(1:501) - Int64"] = @benchmarkable BarycentricWeightGenerator($(1:501))
+suite["Shamir"]["BarycentricWeightGenerator(1:501) - Int128"] = @benchmarkable BarycentricWeightGenerator($([Int128(i) for i in 1:501]))
+suite["Shamir"]["LagrangeCoeffGenerator(1:1000) - delete 499 Int64 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=1:501; lc=LagrangeCoeffGenerator(ids))
+suite["Shamir"]["LagrangeCoeffGenerator(1:1000) - delete 499 Int128 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=[Int128(i) for i in 1:501]; lc=LagrangeCoeffGenerator(ids))
+suite["Shamir"]["BarycentricWeightGenerator(1:1000) - delete 499 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=1:501; lc=BarycentricWeightGenerator(x))
 
 function format_trial(suite, group, res)
     a = allocs(res)

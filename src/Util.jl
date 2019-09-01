@@ -38,20 +38,3 @@ hash2curve(msg::Vector{UInt8}) = BN(md_sha256(msg)) * G1
 sign(sk::BN, p::Point) = sk * p
 genpk(sk::BN) = sk * G2
 
-
-"""
-tl;dr: Given 1_000_000_000 random Affline Points, there is a 5.42% chance of a conflict with this algo.
-
-Assuming that x in each point is a uniformly distributed Prime Field element, 
-then the probability of conflict can be calculated with (for 32-bit systems):
-
-P(conflict) = 1/k + 2/k + ... + (n-1)/k = 1/k * (n-1)^2/2; where k=2^63
-
-Q: Why is k!=2^64?  
-A: Because some of the Lagrange Coeff and Barycentric Weight calculation involves signed arithmetic (e.g. i - k)
-   which should not overflow
-
-Example: n = 1_000_000_000 => P(conflict) = 1/2^63 * (1_000_000_000 - 1)^2/2 = 999_999_999^2 / 2^64 = 0.0542...
-"""
-index(point::EP) = signed((Limb == UInt64 ? point.x[1] : point.x[2] << 32 | point.x[1]) & typemax(Int64))
-index(point::EP2) = signed((Limb == UInt64 ? point.x[1][1] : point.x[1][2] << 32 | point.x[1][1]) & typemax(Int64))

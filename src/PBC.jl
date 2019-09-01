@@ -128,6 +128,23 @@ Base.:(==)(a::Model.AbstractPublicKey, b::Model.AbstractPublicKey) = a.pk == b.p
 Base.:(==)(a::Signature, b::Signature) = a.sig == b.sig
 Base.:(==)(a::Hash, b::Hash) = a.hash == b.hash
 
+"""
+tl;dr: Given 1_000_000_000 random Affline Points, there is a 5.42% chance of a conflict with this algo.
+
+Assuming that x in each point is a uniformly distributed Prime Field element, 
+then the probability of conflict can be calculated with (for 32-bit systems):
+
+P(conflict) = 1/k + 2/k + ... + (n-1)/k = 1/k * (n-1)^2/2; where k=2^63
+
+Q: Why is k!=2^64?  
+A: Because some of the Lagrange Coeff and Barycentric Weight calculation involves signed arithmetic (e.g. i - k)
+   which should not overflow
+
+Example: n = 1_000_000_000 => P(conflict) = 1/2^63 * (1_000_000_000 - 1)^2/2 = 999_999_999^2 / 2^64 = 0.0542...
+"""
+Base.Int64(p::Curve.EP; i=1) = signed(Curve.Limb == UInt64 ? p.x[i] : p.x[2i] << 32 | p.x[2i-1])
+Base.Int64(p::Curve.EP2; i=1) = signed(Curve.Limb == UInt64 ? p.x[1][i] : p.x[1][2i] << 32 | p.x[1][2i-1])
+Base.Int128(p::Util.Point; i=1) = Int128(Int64(p, i=2i)) << 64 | Int128(Int64(p, i=2i-1))
 
 function __init__()
     if Spawn.OptimalSpawn == Spawn.SpawnProcesses
