@@ -27,21 +27,6 @@ struct PublicKey <: AbstractPublicKey
     end
 end
 
-struct SignedPublicKey <: AbstractPublicKey
-    pk::@EP2
-    sig::@EP
-    SignedPublicKey(pk::@EP2, sig::@EP) = new(pk, sig)
-    SignedPublicKey(sk::PrivateKey) = SignedPublicKey(Util.genpk(sk.sk), Util.sign(sk.sk, pk))
-    function SignedPublicKey(bytes::Vector{UInt8})
-        if length(bytes) != (PUBLIC_KEY_SIZE + SIGNATURE_SIZE)
-            error("bytes array has wrong size: $(length(bytes))")
-        end
-        data = Util.decode(@EP2, bytes[1:PUBLIC_KEY_SIZE])
-        signature = Util.decode(@EP, bytes[PUBLIC_KEY_SIZE+1:end])
-        return new(data, signature)
-    end
-end
-
 abstract type AbstractIdentity end
 struct Identity{T} <: AbstractIdentity
     id::T
