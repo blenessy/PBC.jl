@@ -4,7 +4,7 @@ using Test
 using PBC
 
 using PBC.Curve: BN, FP, EP, EP2, curve_gen, LIB
-using PBC.Config: ORDER, G1, G2
+using PBC.Config: ORDER, G1, G2, @EP, @EP2
 using PBC.Shamir: evalpoly, LagrangeCoeffGenerator, BarycentricWeightGenerator, lagrange_interpolate_c0
 
 
@@ -119,6 +119,49 @@ end
     end
 end
 
+@testset "PrivateKeyPoly" begin
+    poly = PrivateKeyPoly(2)
+    @test length(poly) == 3
+    # test iterate
+    @test length(collect(poly)) == 3
+    # test index
+    @test isa(poly[1], BN)
+end
+
+@testset "PublicKeyPoly" begin
+    skpoly = PrivateKeyPoly(2)
+    pkpoly = PublicKeyPoly(skpoly)
+    @test length(skpoly) == length(pkpoly)
+    # test iterate
+    @test length(collect(pkpoly)) == 3
+    # test index
+    @test isa(pkpoly[1], @EP2)
+end
+
+@testset "create_share & validate_share" begin
+    # create a secret polynomial
+    pk1, pk2 = PublicKey(PrivateKey(UInt8[1, 2, 3])), PublicKey(PrivateKey(UInt8[2, 3, 4]))
+    skpoly = PrivateKeyPoly(10)
+    share1, share2 = PBC.create_share(skpoly, pk1), PBC.create_share(skpoly, pk2)
+    @test share1 != share2
+    @test isa(share1, PBC.Model.AbstractPrivateKey)
+
+    pkpoly = PublicKeyPoly(skpoly)
+    @test PBC.verify_share(pkpoly, pk1, share1)
+    @test PBC.verify_share(pkpoly, pk2, share2)
+    # TODO: explore if this can be made to work?
+    @test_broken PBC.verify_share(pkpoly, pk1+pk2, share1+share2)
+end
+
+@testset "batch validate_share" begin
+    # create a secret polynomial
+    pk = PublicKey(PrivateKey(UInt8[1, 2, 3]))
+    skpoly1, skpoly2 = PrivateKeyPoly(10), PrivateKeyPoly(10)
+    share1, share2 = PBC.create_share(skpoly1, pk), PBC.create_share(skpoly2, pk)
+    pkpoly1, pkpoly2 = PublicKeyPoly(skpoly1), PublicKeyPoly(skpoly2)
+    @test PBC.verify_share(pkpoly1+pkpoly2, pk, share1+share2)
+end
+
 @testset "sign & verify" begin
     sk = PrivateKey(UInt8[1, 2, 3])
     sig = PBC.sign(sk, "foo")
@@ -144,6 +187,13 @@ end
     sig1, sig2, sig3 = PBC.sign(sk1, msg1), PBC.sign(sk2, msg2), PBC.sign(sk3, msg3)
     @test PBC.verify(sig1 + sig2, (pk1 => Hash(msg1), pk2 => Hash(msg2)))
     @test !PBC.verify(sig1 + sig2, (pk1 => Hash(msg1),))
+end
+
+@testset "PrivateKey aggregation" begin
+    sk1, sk2 = PrivateKey(UInt8[1, 2, 3]), PrivateKey(UInt8[2, 3, 4])
+    pk1, pk2 = PublicKey(sk1), PublicKey(sk2)
+    @test PBC.sign(sk1 + sk2, "foo") == PBC.sign(sk1, "foo") + PBC.sign(sk2, "foo")
+    @test iszero((sk1 - sk1).sk)
 end
 
 @testset "invalid aggregation" begin

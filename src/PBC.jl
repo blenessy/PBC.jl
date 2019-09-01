@@ -1,5 +1,5 @@
 module PBC
-export PrivateKey, PublicKey, Signature, Hash, Identity
+export PrivateKey, PublicKey, Signature, Hash, Identity, PrivateKeyPoly, PublicKeyPoly
 
 module Curve
     # load curve dynamically
@@ -41,7 +41,7 @@ module Spawn
     include(joinpath(@__DIR__, "Distributed.jl"))
 end
 
-using .Model: PrivateKey, PublicKey, Signature, Hash, Identity
+using .Model: PrivateKey, PublicKey, Signature, Hash, Identity, PrivateKeyPoly, PublicKeyPoly
 
 #sign(sk::PrivateKey, point::Util.Point) = sign(sk, Util.encode(point))
 sign(sk::PrivateKey, hash::Hash) = Signature(sk, hash)
@@ -51,21 +51,25 @@ sign(sk::PrivateKey, msg::String) = sign(sk, Hash(msg))
 pair(ep::Curve.EP, ep2::Curve.EP2) = field_final_exp(curve_miller(ep, ep2))
 pair(ep2::Curve.EP2, ep::Curve.EP) = field_final_exp(curve_miller(ep, ep2))
 
-# The following random signatures 
-struct  PubKeyAndHashGen
-    n::Int
+function create_share(skp::PrivateKeyPoly, id::Model.AbstractIdentity)
+    return PrivateKey(Shamir.evalpoly(skp.coeffs, id.id))
 end
+create_share(skp::PrivateKeyPoly, pk::PublicKey) = create_share(skp, Model.Identity(pk))
 
-Base.length(rsg::PubKeyAndHashGen) = rsg.n
-Base.getindex(rsg::PubKeyAndHashGen, r::UnitRange{Int}) = [getindex(rsg, i) for i in r]
-function Base.getindex(rsg::PubKeyAndHashGen, i::Int)
-    sk = rand(PrivateKey)
-    hash = Hash(rand(UInt8, 10))
-    return PublicKey(sk)=>hash
+function verify_share(pkp::PublicKeyPoly, id::Model.AbstractIdentity, sks::PrivateKey)
+    return Shamir.evalpoly(pkp.coeffs, id.id) == Util.genpk(sks.sk)
 end
-Base.iterate(rsg::PubKeyAndHashGen) = iterate(rsg, 1)
-Base.iterate(rsg::PubKeyAndHashGen, state::Int) = (getindex(rsg, state), state + 1)
+verify_share(pkp::PublicKeyPoly, pk::PublicKey, sks::PrivateKey) = verify_share(pkp, Model.Identity(pk), sks)
 
+Base.length(poly::PrivateKeyPoly) = length(poly.coeffs)
+Base.getindex(poly::PrivateKeyPoly, i::Int) = getindex(poly.coeffs, i)
+Base.iterate(poly::PrivateKeyPoly) = iterate(poly.coeffs)
+Base.iterate(poly::PrivateKeyPoly, state) = iterate(poly.coeffs, state)
+
+Base.length(poly::PublicKeyPoly) = length(poly.coeffs)
+Base.getindex(poly::PublicKeyPoly, i::Int) = getindex(poly.coeffs, i)
+Base.iterate(poly::PublicKeyPoly) = iterate(poly.coeffs)
+Base.iterate(poly::PublicKeyPoly, state) = iterate(poly.coeffs, state)
 
 """
 verify(sig, pkhashpairs)
@@ -116,9 +120,13 @@ Base.isvalid(pk::PublicKey) = isvalid(pk.pk)
 Base.isvalid(hash::Hash) = isvalid(hash.hash)
 Base.isvalid(sig::Signature) = isvalid(sig.sig)
 
+Base.:(+)(a::PrivateKey, b::PrivateKey) = PrivateKey(mod(a.sk + b.sk, Config.ORDER))
 Base.:(+)(a::PublicKey, b::PublicKey) = PublicKey(a.pk + b.pk)
+Base.:(+)(a::PublicKeyPoly, b::PublicKeyPoly) = PublicKeyPoly(map(+, a.coeffs, b.coeffs))
 Base.:(+)(a::Signature, b::Signature) = Signature(a.sig + b.sig)
+Base.:(-)(a::PrivateKey, b::PrivateKey) = PrivateKey(mod(a.sk - b.sk, Config.ORDER))
 Base.:(-)(a::PublicKey, b::PublicKey) = PublicKey(a.pk - b.pk)
+Base.:(-)(a::PublicKeyPoly, b::PublicKeyPoly) = PublicKeyPoly(map(-, a.coeffs, b.coeffs))
 Base.:(-)(a::Signature, b::Signature) = Signature(a.sig - b.sig)
 
 Base.rand(::Type{PrivateKey}) = PrivateKey(Util.gensk())
