@@ -2,9 +2,9 @@ using .Curve: BN
 using .Config: ORDER
 
 struct LagrangeCoeffGenerator
-    coeffs::Dict{Int,BN}
+    coeffs::Dict{Int64,BN}
     order::BN
-    LagrangeCoeffGenerator() = new(Dict{Int,BN}(), ORDER)
+    LagrangeCoeffGenerator() = new(Dict{Int64,BN}(), ORDER)
     # calculate the weights ahead of time
     function LagrangeCoeffGenerator(keys)
         lc = LagrangeCoeffGenerator()
@@ -16,10 +16,10 @@ struct LagrangeCoeffGenerator
 end
 
 Base.length(lc::LagrangeCoeffGenerator) = length(lc.coeffs)
-Base.getindex(lc::LagrangeCoeffGenerator, i::Int) = getindex(lc.coeffs, i)
+Base.getindex(lc::LagrangeCoeffGenerator, i::Int64) = getindex(lc.coeffs, i)
 
 # NOTE: not thread safe
-function Base.push!(lc::LagrangeCoeffGenerator, i::Int)
+function Base.push!(lc::LagrangeCoeffGenerator, i::Int64)
     coeff = get(lc.coeffs, i, nothing)
     if coeff === nothing
         # update existing coeffs
@@ -37,7 +37,7 @@ function Base.push!(lc::LagrangeCoeffGenerator, i::Int)
     return coeff
 end
 
-function Base.delete!(lc::LagrangeCoeffGenerator, i::Int)
+function Base.delete!(lc::LagrangeCoeffGenerator, i::Int64)
     if length(lc.coeffs) != length(delete!(lc.coeffs, i))
         # update existing coeffs
         invi = invmod(i, lc.order)

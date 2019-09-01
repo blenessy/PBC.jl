@@ -128,20 +128,6 @@ Base.:(==)(a::Model.AbstractPublicKey, b::Model.AbstractPublicKey) = a.pk == b.p
 Base.:(==)(a::Signature, b::Signature) = a.sig == b.sig
 Base.:(==)(a::Hash, b::Hash) = a.hash == b.hash
 
-"""
-TODO: Given 10000 random Affline Points, there is a 1.16% chance of a conflict with this algo on a 32-bit system.
-
-Assuming that x in each point is a uniformly distributed Prime Field element, 
-then the probability of conflict can be calculated with (for 32-bit systems):
-
-P(conflict) = 1/k + 2/k + ... + (n-1)/k = 1/k * (n-1)^2/2; where k=big"2"^(8sizeof(UInt))
-
-Example: n = 10000; k=2^32 => P(conflict) = 1/2^32 * (10000 - 1)^2/2 = 9999^2 / 2^33 = 0.0116...
-
-"""
-Base.hash(point::Curve.EP) = point.x[1]
-Base.hash(point::Curve.EP2) = point.x[1][1]
-
 
 function __init__()
     if Spawn.OptimalSpawn == Spawn.SpawnProcesses

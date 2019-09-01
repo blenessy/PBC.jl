@@ -2,9 +2,9 @@ using .Config: ORDER
 using .Curve: BN
 
 struct BarycentricWeightGenerator
-    weights::Dict{Int,BN}
+    weights::Dict{Int64,BN}
     order::BN
-    BarycentricWeightGenerator() = new(Dict{Int,BN}(), ORDER)
+    BarycentricWeightGenerator() = new(Dict{Int64,BN}(), ORDER)
     # calculate the weights ahead of time
     function BarycentricWeightGenerator(keys)
         lc = BarycentricWeightGenerator()
@@ -16,10 +16,10 @@ struct BarycentricWeightGenerator
 end
 
 Base.length(lc::BarycentricWeightGenerator) = length(lc.weights)
-Base.getindex(lc::BarycentricWeightGenerator, i::Int) = getindex(lc.weights, i)
+Base.getindex(lc::BarycentricWeightGenerator, i::Int64) = getindex(lc.weights, i)
 
 # NOTE: not thread safe
-function Base.push!(lc::BarycentricWeightGenerator, i::Int)
+function Base.push!(lc::BarycentricWeightGenerator, i::Int64)
     # return the existing if found
     coeff = get(lc.weights, i, nothing)
     if coeff === nothing
@@ -37,7 +37,7 @@ function Base.push!(lc::BarycentricWeightGenerator, i::Int)
     return coeff
 end
 
-function Base.delete!(lc::BarycentricWeightGenerator, i::Int)
+function Base.delete!(lc::BarycentricWeightGenerator, i::Int64)
     if length(lc.weights) != length(delete!(lc.weights, i))
         # update existing coeffs
         for (k, c) in lc.weights

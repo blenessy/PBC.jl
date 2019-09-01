@@ -4,7 +4,8 @@ using .Util: Point
 using .Config: PRIME, ORDER
 
 
-function evalpoly(poly, x)
+evalpoly(poly, x) = evalpoly(poly, BN(x))
+function evalpoly(poly, x::BN)
     @assert length(poly) > 0
     xpow, y = x, first(poly)
     for coeff in Iterators.drop(poly, 1)
@@ -45,32 +46,31 @@ This version only cares about finding the secret coefficient (index 0) as fast a
 
 weights need to be pre-calculated with `updateweights!` before calling this function.
 """
-function lagrange_interpolate_c0(coeffs::LagrangeCoeffGenerator, x::AbstractVector{Int}, y::AbstractVector{T})  where {T}
-    length(x) >= 2 || error("need at least two shares")
-    length(y) == length(y) || error("X and Y have different lengths")
+function lagrange_interpolate_c0(coeffs::LagrangeCoeffGenerator, shares::AbstractDict{Int64,T})  where {T}
+    length(shares) >= 2 || error("need at least two shares")
     c0 = zero(T)
-    for (i, j) in enumerate(x)
-        c0 += coeffs[j] * y[i]
+    for (x, y) in shares
+        c0 += coeffs[x] * y
     end
     return isa(c0, Point) ? c0 : mod(c0, ORDER)
 end
 
-function lagrange_interpolate_c0(weights::BarycentricWeightGenerator, x::AbstractVector{Int}, y::AbstractVector{T}) where {T}
-    length(x) >= 2 || error("need at least two shares")
-    length(y) == length(y) || error("X and Y have different lengths")
+function lagrange_interpolate_c0(weights::BarycentricWeightGenerator, shares::AbstractDict{Int64,T}) where {T}
+    length(shares) >= 2 || error("need at least two shares")
     num, denom = zero(T), zero(BN)
-    for (i, j) in enumerate(x)
+    for (x, y) in shares
         # optimisation: normally inv is done when calculating weights
         #w = invmod(weights[j], ORDER)
-        w = invmod(weights[j], ORDER)
+        w = invmod(weights[x], ORDER)
         #@info weights[j], w
-        num += w * y[i]
+        num += w * y
+        # just addition in practice no risk of overflow
         denom += w
     end
-    c0 = invmod(denom, ORDER) * num
+    c0 = invmod(mod(denom, ORDER), ORDER) * num
     return isa(c0, Point) ? c0 : mod(c0, ORDER)
 end
 
-lagrange_interpolate_c0(::Type{T}, x::AbstractVector{Int}, y::AbstractVector{S}) where {S,T} = lagrange_interpolate_c0(T(x), x, y)
-lagrange_interpolate_c0(x::AbstractVector{Int}, y::AbstractVector{T}) where {T} = lagrange_interpolate_c0(LagrangeCoeffGenerator, x, y)
+lagrange_interpolate_c0(::Type{T}, shares::AbstractDict{Int64,S}) where {S,T} = lagrange_interpolate_c0(T(keys(shares)), shares)
+lagrange_interpolate_c0(shares::AbstractDict{Int64,T}) where {T} = lagrange_interpolate_c0(LagrangeCoeffGenerator, shares)
 

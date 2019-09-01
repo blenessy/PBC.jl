@@ -5,34 +5,38 @@ using PBC
 
 using PBC.Curve: BN, FP, EP, EP2, curve_gen, LIB
 using PBC.Config: ORDER
+using PBC.Util: index
 
 using PBC.Shamir: evalpoly, LagrangeCoeffGenerator, BarycentricWeightGenerator, lagrange_interpolate_c0
 
 
 @testset "lagrange_interpolate_c0 - trivial" begin
-    x = 1:2 # ids
-    for c in (BN(1), curve_gen(EP), curve_gen(EP2))
-        poly = [c, c] # derive secret coeffs from c
-        y = [evalpoly(poly, i) for i in x] # secret shares
-        @test y == [2c, 3c]
-        @test lagrange_interpolate_c0(BarycentricWeightGenerator, x, y) == c
-        @test lagrange_interpolate_c0(LagrangeCoeffGenerator, x, y) == c
-        @test lagrange_interpolate_c0(x, y) == c
+    for idtype in (EP, EP2)
+        ids = (rand(idtype), rand(idtype))
+        for c in (BN(1), curve_gen(EP), curve_gen(EP2))
+            poly = [c, c] # derive secret coeffs from c
+            shares = Dict(index(id)=>evalpoly(poly, index(id)) for id in ids)
+            @test lagrange_interpolate_c0(BarycentricWeightGenerator, shares) == c
+            @test lagrange_interpolate_c0(LagrangeCoeffGenerator, shares) == c
+            @test lagrange_interpolate_c0(shares) == c
+        end
     end
 end
 
 @testset "Shamir: lagrange_interpolate_c0 - complex" begin
-    x = 1:5 # ids
-    n = length(x)
-    for c in (BN(123), 123 * curve_gen(EP), 123 * curve_gen(EP2))
-        poly = [c, 2c, 3c] # derive secret coeffs from c
-        t = length(poly)
-        y = [evalpoly(poly, i) for i in x]
-        for i in 1:n-t+1
-            r = i:i+t-1
-            @test lagrange_interpolate_c0(BarycentricWeightGenerator, x[r], y[r]) == c
-            @test lagrange_interpolate_c0(LagrangeCoeffGenerator, x[r], y[r]) == c
-            @test lagrange_interpolate_c0(x[r], y[r]) == c
+    for idtype in (EP, EP2)
+        ids = (rand(idtype), rand(idtype), rand(idtype), rand(idtype), rand(idtype))
+        n = length(ids)
+        for c in (BN(123), 123 * curve_gen(EP), 123 * curve_gen(EP2))
+            poly = [c, 2c, 3c] # derive secret coeffs from c
+            shares = Dict(index(id)=>evalpoly(poly, index(id)) for id in ids)
+            t = length(poly)
+            for i in 1:n-t+1
+                r = i:i+t-1
+                @test lagrange_interpolate_c0(BarycentricWeightGenerator, shares) == c
+                @test lagrange_interpolate_c0(LagrangeCoeffGenerator, shares) == c
+                @test lagrange_interpolate_c0(shares) == c
+            end
         end
     end
 end
@@ -77,6 +81,14 @@ end
     @test length(weights) == 2
     @test push!(weights, 2) == BN(2)
     @test push!(weights, 1) == ORDER - 1
+end
+
+@testset "hash of Points" begin
+    for i in 1:1000
+        p, q = rand(EP), rand(EP2)
+        @test !signbit(index(p))
+        @test !signbit(index(q))
+    end
 end
 
 @testset "PrivateKey" begin
