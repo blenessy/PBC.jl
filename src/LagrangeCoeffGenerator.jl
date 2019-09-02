@@ -1,13 +1,13 @@
 using .Curve: BN
-using .Config: ORDER
+using .Config: ORDER, @ID
 
-struct LagrangeCoeffGenerator{T}
-    coeffs::Dict{T,BN}
+struct LagrangeCoeffGenerator
+    coeffs::Dict{@ID,BN}
     order::BN
-    LagrangeCoeffGenerator(::Type{T}) where {T <: Signed} = new{T}(Dict{T,BN}(), ORDER)
+    LagrangeCoeffGenerator() = new(Dict{@ID,BN}(), ORDER)
     # calculate the weights ahead of time
     function LagrangeCoeffGenerator(keys)
-        lc = LagrangeCoeffGenerator(eltype(keys))
+        lc = LagrangeCoeffGenerator()
         for x in keys
             push!(lc, x);
         end
@@ -16,10 +16,10 @@ struct LagrangeCoeffGenerator{T}
 end
 
 Base.length(lc::LagrangeCoeffGenerator) = length(lc.coeffs)
-Base.getindex(lc::LagrangeCoeffGenerator, i::T) where {T <: Signed} = getindex(lc.coeffs, i)
+Base.getindex(lc::LagrangeCoeffGenerator, i::@ID) = getindex(lc.coeffs, i)
 
 # NOTE: not thread safe
-function Base.push!(lc::LagrangeCoeffGenerator, i::T) where {T <: Signed}
+function Base.push!(lc::LagrangeCoeffGenerator, i::@ID)
     coeff = get(lc.coeffs, i, nothing)
     if coeff === nothing
         # update existing coeffs
@@ -37,7 +37,7 @@ function Base.push!(lc::LagrangeCoeffGenerator, i::T) where {T <: Signed}
     return coeff
 end
 
-function Base.delete!(lc::LagrangeCoeffGenerator, i::T) where {T <: Signed}
+function Base.delete!(lc::LagrangeCoeffGenerator, i::@ID)
     if length(lc.coeffs) != length(delete!(lc.coeffs, i))
         # update existing coeffs
         invi = invmod(i, lc.order)

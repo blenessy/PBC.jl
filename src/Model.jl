@@ -1,5 +1,6 @@
 using .Curve: BN, FP, bn_read_bin!
-using .Config: @EP, @EP2, SIGNATURE_SIZE, PUBLIC_KEY_SIZE, PRIVATE_KEY_SIZE, ORDER
+using .Config: @EP, @EP2, @ID, SIGNATURE_SIZE, PUBLIC_KEY_SIZE, PRIVATE_KEY_SIZE, ORDER
+using .Shamir: BarycentricWeightGenerator
 
 abstract type AbstractPrivateKey end
 struct PrivateKey <: AbstractPrivateKey
@@ -28,11 +29,10 @@ struct PublicKey <: AbstractPublicKey
 end
 
 abstract type AbstractIdentity end
-struct Identity{T} <: AbstractIdentity
-    id::T
-    Identity(id::T) where {T<:Signed} = new{T}(T(id & typemax(T)))
-    Identity(::Type{T}, pk::PublicKey) where {T<:Signed} = Identity(T(pk.pk))
-    Identity(pk::PublicKey) = Identity(Int64(pk.pk))
+struct Identity <: AbstractIdentity
+    id::@ID
+    Identity(id::@ID) = new((@ID)(id & typemax(@ID)))
+    Identity(pk::PublicKey) = Identity((@ID)(pk.pk))
 end
 
 abstract type AbstractHash end
@@ -65,4 +65,11 @@ struct PublicKeyPoly <: AbstractPublicKeyPoly
     coeffs::Vector{@EP2}
     PublicKeyPoly(coeffs::Vector{@EP2}) = new(coeffs)
     PublicKeyPoly(skpoly::PrivateKeyPoly) = PublicKeyPoly([Util.genpk(sk) for sk in skpoly])
+end
+
+abstract type AbstractSignatureShares end
+struct SignatureShares <: AbstractSignatureShares
+    shares::Dict{@ID,@EP}
+    weights::BarycentricWeightGenerator
+    SignatureShares() = new(Dict{@ID,@EP}(), BarycentricWeightGenerator())
 end

@@ -1,5 +1,5 @@
 module PBC
-export PrivateKey, PublicKey, Signature, Hash, Identity, PrivateKeyPoly, PublicKeyPoly
+export PrivateKey, PublicKey, Signature, Hash, Identity, PrivateKeyPoly, PublicKeyPoly, SignatureShares
 
 module Curve
     # load curve dynamically
@@ -18,17 +18,17 @@ module Util
     include(joinpath(@__DIR__, "Util.jl"))
 end
 
-module Model
-    import ..Config, ..Util, ..Curve
-    include(joinpath(@__DIR__, "Model.jl"))
-end
-
 module Shamir
-    import ..Config, ..Curve, ..Model, ..Util
-
+    import ..Config, ..Curve, ..Util
     include(joinpath(@__DIR__, "LagrangeCoeffGenerator.jl"))
     include(joinpath(@__DIR__, "BarycentricWeightGenerator.jl"))
     include(joinpath(@__DIR__, "Shamir.jl"))
+end
+
+
+module Model
+    import ..Config, ..Util, ..Curve, ..Shamir
+    include(joinpath(@__DIR__, "Model.jl"))
 end
 
 module Spawn
@@ -41,7 +41,7 @@ module Spawn
     include(joinpath(@__DIR__, "Distributed.jl"))
 end
 
-using .Model: PrivateKey, PublicKey, Signature, Hash, Identity, PrivateKeyPoly, PublicKeyPoly
+using .Model: PrivateKey, PublicKey, Signature, Hash, Identity, PrivateKeyPoly, PublicKeyPoly, SignatureShares
 
 #sign(sk::PrivateKey, point::Util.Point) = sign(sk, Util.encode(point))
 sign(sk::PrivateKey, hash::Hash) = Signature(sk, hash)
@@ -60,6 +60,15 @@ function verify_share(pkp::PublicKeyPoly, id::Model.AbstractIdentity, sks::Priva
     return Shamir.evalpoly(pkp.coeffs, id.id) == Util.genpk(sks.sk)
 end
 verify_share(pkp::PublicKeyPoly, pk::PublicKey, sks::PrivateKey) = verify_share(pkp, Model.Identity(pk), sks)
+
+Model.Signature(ss::SignatureShares) = Signature(Shamir.lagrange_interpolate_c0(ss.weights, ss.shares))
+PublicKey(pkp::PublicKeyPoly) = PublicKey(pkp.coeffs[1])
+
+Base.setindex!(ss::SignatureShares, sigshare::Signature, pk::PublicKey) = setindex!(ss, sigshare, Model.Identity(pk))
+function Base.setindex!(ss::SignatureShares, sigshare::Signature, id::Model.AbstractIdentity)
+    ss.shares[id.id] = sigshare.sig # register share
+    push!(ss.weights, id.id) # register id
+end
 
 Base.length(poly::PrivateKeyPoly) = length(poly.coeffs)
 Base.getindex(poly::PrivateKeyPoly, i::Int) = getindex(poly.coeffs, i)

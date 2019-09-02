@@ -1,13 +1,13 @@
-using .Config: ORDER
+using .Config: ORDER, @ID
 using .Curve: BN
 
-struct BarycentricWeightGenerator{T}
-    weights::Dict{T,BN}
+struct BarycentricWeightGenerator
+    weights::Dict{@ID,BN}
     order::BN
-    BarycentricWeightGenerator(::Type{T}) where {T <: Signed} = new{T}(Dict{T,BN}(), ORDER)
+    BarycentricWeightGenerator() = new(Dict{@ID,BN}(), ORDER)
     # calculate the weights ahead of time
     function BarycentricWeightGenerator(keys)
-        lc = BarycentricWeightGenerator(eltype(keys))
+        lc = BarycentricWeightGenerator()
         for x in keys
             push!(lc, x);
         end
@@ -16,10 +16,10 @@ struct BarycentricWeightGenerator{T}
 end
 
 Base.length(lc::BarycentricWeightGenerator) = length(lc.weights)
-Base.getindex(lc::BarycentricWeightGenerator, i::T) where {T <: Signed} = getindex(lc.weights, i)
+Base.getindex(lc::BarycentricWeightGenerator, i::@ID) = getindex(lc.weights, i)
 
 # NOTE: not thread safe
-function Base.push!(lc::BarycentricWeightGenerator, i::T) where {T <: Signed}
+function Base.push!(lc::BarycentricWeightGenerator, i::@ID)
     # return the existing if found
     coeff = get(lc.weights, i, nothing)
     if coeff === nothing
@@ -37,7 +37,7 @@ function Base.push!(lc::BarycentricWeightGenerator, i::T) where {T <: Signed}
     return coeff
 end
 
-function Base.delete!(lc::BarycentricWeightGenerator, i::T) where {T <: Signed}
+function Base.delete!(lc::BarycentricWeightGenerator, i::@ID)
     if length(lc.weights) != length(delete!(lc.weights, i))
         # update existing coeffs
         for (k, c) in lc.weights

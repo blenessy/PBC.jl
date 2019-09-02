@@ -1,10 +1,14 @@
 const SMALL_SIGNATURES = get(ENV, "PBC_SMALL_SIGNATURES", "n") == "y"
+const SMALL_IDENTITIES = get(ENV, "PBC_SMALL_IDENTITIES", "y") == "y"
 
 macro EP()
     return SMALL_SIGNATURES ? :(Curve.EP) : :(Curve.EP2)
 end
 macro EP2()
     return SMALL_SIGNATURES ? :(Curve.EP2) : :(Curve.EP)
+end
+macro ID()
+    return SMALL_IDENTITIES ? :(Int64) : :(Int128)
 end
 
 const G1 = Curve.curve_gen(@EP)

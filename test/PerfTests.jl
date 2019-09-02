@@ -18,6 +18,13 @@ Base.rand(::Type{Signature}) = Signature(rand(PBC.Config.@EP))
 Base.rand(::Type{Hash}) = Hash(rand(PBC.Config.@EP))
 Base.rand(::Type{Identity}) = Identity(rand(PublicKey))
 Base.rand(::Type{PublicKeyPoly}; n=500) = PublicKeyPoly(PrivateKeyPoly(n))
+function Base.rand(::Type{SignatureShares}; n=501)
+    sigshares = SignatureShares()
+    for i in 1:n
+        sigshares[rand(Identity)] = Signature(rand(PBC.Config.@EP))
+    end
+    return sigshares
+end
 
 const x = 1:1000
 
@@ -33,24 +40,22 @@ suite["PBC"]["PBC.sign(::PrivateKey, ::Hash)"] = @benchmarkable PBC.sign($(rand(
 suite["PBC"]["PBC.verify(::Signature, ::PublicKey, ::Hash)"] = @benchmarkable PBC.verify($(rand(Signature)), $(rand(PublicKey)), $(rand(Hash)))
 suite["PBC"]["PBC.verify_share(::PublicKeyPoly, ::Identity, ::PrivateKey)"] = @benchmarkable PBC.verify_share($(rand(PublicKeyPoly, n=500)), $(rand(Identity)), $(rand(PrivateKey)))
 suite["PBC"]["::PublicKeyPoly + ::PublicKeyPoly"] = @benchmarkable $(rand(PublicKeyPoly, n=500)) + $(rand(PublicKeyPoly, n=500))
+suite["PBC"]["Signature(::SignatureShares)"] = @benchmarkable Signature($(rand(SignatureShares, n=501)))
 suite["PBC"]["isvalid(::PrivateKey)"] = @benchmarkable isvalid($(rand(PrivateKey)))
 
-# suite["Shamir"] = BenchmarkGroup()
-# suite["Shamir"]["lagrange_interpolate_c0(::LagrangeCoeffGenerator, ::Vector{BN})"] = @benchmarkable lagrange_interpolate_c0($(LagrangeCoeffGenerator(x)), $(Dict(i=>rand(BN) for i in x)))
-# suite["Shamir"]["lagrange_interpolate_c0(::LagrangeCoeffGenerator, ::Vector{EP})"] = @benchmarkable lagrange_interpolate_c0($(LagrangeCoeffGenerator(x)), $(Dict(i=>rand(EP) for i in x)))
-# suite["Shamir"]["lagrange_interpolate_c0(::LagrangeCoeffGenerator, ::Vector{EP2})"] = @benchmarkable lagrange_interpolate_c0($(LagrangeCoeffGenerator(x)), $(Dict(i=>rand(EP2) for i in x)))
+suite["Shamir"] = BenchmarkGroup()
+suite["Shamir"]["lagrange_interpolate_c0(::LagrangeCoeffGenerator, ::Vector{BN})"] = @benchmarkable lagrange_interpolate_c0($(LagrangeCoeffGenerator(x)), $(Dict(i=>rand(BN) for i in x)))
+suite["Shamir"]["lagrange_interpolate_c0(::LagrangeCoeffGenerator, ::Vector{EP})"] = @benchmarkable lagrange_interpolate_c0($(LagrangeCoeffGenerator(x)), $(Dict(i=>rand(EP) for i in x)))
+suite["Shamir"]["lagrange_interpolate_c0(::LagrangeCoeffGenerator, ::Vector{EP2})"] = @benchmarkable lagrange_interpolate_c0($(LagrangeCoeffGenerator(x)), $(Dict(i=>rand(EP2) for i in x)))
 
-# suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{BN}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(BN) for i in x)))
-# suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{EP}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(EP) for i in x)))
-# suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{EP2}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(EP2) for i in x)))
+suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{BN}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(BN) for i in x)))
+suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{EP}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(EP) for i in x)))
+suite["Shamir"]["lagrange_interpolate_c0(::BarycentricWeightGenerator, ::Vector{EP2}))"] =  @benchmarkable lagrange_interpolate_c0($(BarycentricWeightGenerator(x)), $(Dict(i=>rand(EP2) for i in x)))
 
-# suite["Shamir"]["LagrangeCoeffGenerator(1:501) - Int64"] = @benchmarkable LagrangeCoeffGenerator($(1:501))
-# suite["Shamir"]["LagrangeCoeffGenerator(1:501) - Int128"] = @benchmarkable LagrangeCoeffGenerator($([Int128(i) for i in 1:501]))
-# suite["Shamir"]["BarycentricWeightGenerator(1:501) - Int64"] = @benchmarkable BarycentricWeightGenerator($(1:501))
-# suite["Shamir"]["BarycentricWeightGenerator(1:501) - Int128"] = @benchmarkable BarycentricWeightGenerator($([Int128(i) for i in 1:501]))
-# suite["Shamir"]["LagrangeCoeffGenerator(1:1000) - delete 499 Int64 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=1:501; lc=LagrangeCoeffGenerator(ids))
-# suite["Shamir"]["LagrangeCoeffGenerator(1:1000) - delete 499 Int128 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=[Int128(i) for i in 1:501]; lc=LagrangeCoeffGenerator(ids))
-# suite["Shamir"]["BarycentricWeightGenerator(1:1000) - delete 499 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=1:501; lc=BarycentricWeightGenerator(x))
+suite["Shamir"]["LagrangeCoeffGenerator(1:501)"] = @benchmarkable LagrangeCoeffGenerator($(1:501))
+suite["Shamir"]["BarycentricWeightGenerator(1:501)"] = @benchmarkable BarycentricWeightGenerator($(1:501))
+suite["Shamir"]["LagrangeCoeffGenerator(1:1000) - delete 499 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=1:501; lc=LagrangeCoeffGenerator(ids))
+suite["Shamir"]["BarycentricWeightGenerator(1:1000) - delete 499 keys"] = @benchmarkable for i in ids; delete!(lc, i); end setup=(ids=1:501; lc=BarycentricWeightGenerator(x))
 
 function format_trial(suite, group, res)
     a = allocs(res)

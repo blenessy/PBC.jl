@@ -9,11 +9,25 @@ using PBC.Shamir: evalpoly, LagrangeCoeffGenerator, BarycentricWeightGenerator, 
 
 
 @testset "lagrange_interpolate_c0 - trivial" begin
-    for idtype in (Int64, Int128)
-        ids = [idtype(i) for i in 1:2]
-        for c in (BN(1), curve_gen(EP), curve_gen(EP2))
-            poly = [c, c] # derive secret coeffs from c
-            shares = Dict(x=>evalpoly(poly, x) for x in ids)
+    ids = 1:2
+    for c in (BN(1), curve_gen(EP), curve_gen(EP2))
+        poly = [c, c] # derive secret coeffs from c
+        shares = Dict(x=>evalpoly(poly, x) for x in ids)
+        @test lagrange_interpolate_c0(BarycentricWeightGenerator(keys(shares)), shares) == c
+        @test lagrange_interpolate_c0(LagrangeCoeffGenerator(keys(shares)), shares) == c
+        @test lagrange_interpolate_c0(shares) == c
+    end
+end
+
+@testset "Shamir: lagrange_interpolate_c0 - complex" begin
+    ids = 1:5
+    n = length(ids)
+    for c in (BN(123), 123 * curve_gen(EP), 123 * curve_gen(EP2))
+        poly = [c, 2c, 3c] # derive secret coeffs from c
+        t = length(poly)
+        shares = Dict(x=>evalpoly(poly, x) for x in ids)
+        for i in 1:n-t+1
+            r = i:i+t-1
             @test lagrange_interpolate_c0(BarycentricWeightGenerator(keys(shares)), shares) == c
             @test lagrange_interpolate_c0(LagrangeCoeffGenerator(keys(shares)), shares) == c
             @test lagrange_interpolate_c0(shares) == c
@@ -21,26 +35,8 @@ using PBC.Shamir: evalpoly, LagrangeCoeffGenerator, BarycentricWeightGenerator, 
     end
 end
 
-@testset "Shamir: lagrange_interpolate_c0 - complex" begin
-    for idtype in (Int64, Int128)
-        ids = [idtype(i) for i in 1:5]
-        n = length(ids)
-        for c in (BN(123), 123 * curve_gen(EP), 123 * curve_gen(EP2))
-            poly = [c, 2c, 3c] # derive secret coeffs from c
-            t = length(poly)
-            shares = Dict(x=>evalpoly(poly, x) for x in ids)
-            for i in 1:n-t+1
-                r = i:i+t-1
-                @test lagrange_interpolate_c0(BarycentricWeightGenerator(keys(shares)), shares) == c
-                @test lagrange_interpolate_c0(LagrangeCoeffGenerator(keys(shares)), shares) == c
-                @test lagrange_interpolate_c0(shares) == c
-            end
-        end
-    end
-end
-
 @testset "Shamir: LagrangeCoeffGenerator" begin
-    coeffs = LagrangeCoeffGenerator(Int64)
+    coeffs = LagrangeCoeffGenerator()
     # generate first coeff
     @test push!(coeffs, 1) == BN(1)
 
@@ -61,7 +57,7 @@ end
 end
 
 @testset "Shamir: BarycentricWeightGenerator" begin
-    weights = BarycentricWeightGenerator(Int64)
+    weights = BarycentricWeightGenerator()
     # generate first coeff
     @test push!(weights, 1) == ORDER - 1
 
@@ -113,10 +109,8 @@ end
 end
 
 @testset "Identity" begin
-    for idtype in (Int64, Int128)
-        @test !signbit(Identity(idtype(-1)).id)
-        @test !iszero(Identity(idtype, PublicKey(PrivateKey(UInt8[1, 2, 3]))).id)
-    end
+    @test !signbit(Identity(-1).id)
+    @test !iszero(Identity(PublicKey(PrivateKey(UInt8[1, 2, 3]))).id)
 end
 
 @testset "PrivateKeyPoly" begin
@@ -154,12 +148,33 @@ end
 end
 
 @testset "batch validate_share" begin
-    # create a secret polynomial
     pk = PublicKey(PrivateKey(UInt8[1, 2, 3]))
+    # create a secret polynomial
     skpoly1, skpoly2 = PrivateKeyPoly(10), PrivateKeyPoly(10)
+    # create shares for the same id from two different secret polynomials
     share1, share2 = PBC.create_share(skpoly1, pk), PBC.create_share(skpoly2, pk)
     pkpoly1, pkpoly2 = PublicKeyPoly(skpoly1), PublicKeyPoly(skpoly2)
+    # make sure that the aggregate secret share validates with the aggregate public key polynomial
     @test PBC.verify_share(pkpoly1+pkpoly2, pk, share1+share2)
+end
+
+@testset "share sign & recover" begin
+    alice, bob, charlotte  = PublicKey(rand(PrivateKey)), PublicKey(rand(PrivateKey)), PublicKey(rand(PrivateKey))
+    # create a secret polynomial of degree 2 => 3 shares
+    skpoly = PrivateKeyPoly(2)
+    pkpoly = PublicKeyPoly(skpoly)
+    # create three private keys from the secret polynomial
+    skalice, skbob, skcharlotte = PBC.create_share(skpoly, alice), PBC.create_share(skpoly, bob), PBC.create_share(skpoly, charlotte)
+    # the signature shares are collected in a SignatureShares object
+    sigshares = SignatureShares()
+    # each user signs with each secret key share, thus creates separate signature shares
+    sigshares[alice] = PBC.sign(skalice, "foo")
+    sigshares[bob] = PBC.sign(skbob, "foo")
+    # not enough signatures - the recovered signature is NOT valid
+    @test !PBC.verify(Signature(sigshares), PublicKey(pkpoly), "foo")
+    # enough signatures - the recovered signature is valid
+    sigshares[charlotte] = PBC.sign(skcharlotte, "foo")
+    @test PBC.verify(Signature(sigshares), PublicKey(pkpoly), "foo")
 end
 
 @testset "sign & verify" begin

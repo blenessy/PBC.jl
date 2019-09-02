@@ -1,7 +1,6 @@
 using .Curve: BN, FP, EP, EP2, LIB, Limb
-using .Model: AbstractIdentity, AbstractPrivateKey, AbstractSignature
 using .Util: Point
-using .Config: PRIME, ORDER
+using .Config: PRIME, ORDER, @ID
 
 
 evalpoly(poly, x) = evalpoly(poly, BN(x))
@@ -15,38 +14,7 @@ function evalpoly(poly, x::BN)
     return isa(y, Point) ? y : mod(y, ORDER)
 end
 
-# TODO: move to RelicToolkit.jl
-# function Base.:(*)(a::BN, b::BN)
-#     c = BN()
-#     ccall((:bn_mul_comba, Curve.LIB), Cvoid, (Ref{BN}, Ref{BN}, Ref{BN}), c, a, b)
-#     return c
-# end
-
-# Base.:(*)(a::BN, b::FP) = FP(a) * b
-# Base.:(*)(a::FP, b::BN) = a * FP(b)
-#Base.:(*)(a::FP, b::EP) = BN(a) * b
-#Base.:(*)(a::FP, b::EP2) = BN(a) * b
-# function Base.:(+)(a::BN, b::BN)
-#     c = BN()
-#     ccall((:bn_add, Curve.LIB), Cvoid, (Ref{BN}, Ref{BN}, Ref{BN}), c, a, b)
-#     return c
-# end
-
-# function Curve.BN(a::Curve.FP)
-#     c = BN()
-#     ccall((:fp_prime_back, Curve.LIB), Cvoid, (Ref{BN}, Ref{Curve.FP}), c, a)
-#     return c
-# end
-# Curve.FP(a::Curve.FP) = a
-
-
-"""
-This optimised Lagrange polynomial interpolation.
-This version only cares about finding the secret coefficient (index 0) as fast as possible.
-
-weights need to be pre-calculated with `updateweights!` before calling this function.
-"""
-function lagrange_interpolate_c0(coeffs::LagrangeCoeffGenerator{K}, shares::AbstractDict{K,V})  where {K<:Signed,V}
+function lagrange_interpolate_c0(coeffs::LagrangeCoeffGenerator, shares::AbstractDict{@ID,V})  where {V<:Union{BN,EP,EP2}}
     length(shares) >= 2 || error("need at least two shares")
     c0 = zero(V)
     for (x, y) in shares
@@ -55,7 +23,7 @@ function lagrange_interpolate_c0(coeffs::LagrangeCoeffGenerator{K}, shares::Abst
     return isa(c0, Point) ? c0 : mod(c0, ORDER)
 end
 
-function lagrange_interpolate_c0(weights::BarycentricWeightGenerator{K}, shares::AbstractDict{K,V}) where {K<:Signed,V}
+function lagrange_interpolate_c0(weights::BarycentricWeightGenerator, shares::AbstractDict{@ID,V}) where {V<:Union{BN,EP,EP2}}
     length(shares) >= 2 || error("need at least two shares")
     num, denom = zero(V), zero(BN)
     for (x, y) in shares
@@ -71,6 +39,5 @@ function lagrange_interpolate_c0(weights::BarycentricWeightGenerator{K}, shares:
     return isa(c0, Point) ? c0 : mod(c0, ORDER)
 end
 
-lagrange_interpolate_c0(shares::AbstractDict{K,V}) where {K<:Signed,V} =
+lagrange_interpolate_c0(shares::AbstractDict) =
     lagrange_interpolate_c0(LagrangeCoeffGenerator(keys(shares)), shares)
-
