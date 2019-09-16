@@ -34,11 +34,10 @@ end
 module Spawn
     import ..Config, ..Model, ..Curve
     abstract type SpawnProcesses end
-    #segfaults in 1.3-alpha
-    #abstract type SpawnThreads end
-    #const OptimalSpawn = isdefined(Threads, Symbol("@spawn")) ? SpawnThreads : SpawnProcesses
-    const OptimalSpawn = SpawnProcesses
+    abstract type SpawnThreads end
+    const DefaultSpawn = SpawnThreads
     include(joinpath(@__DIR__, "Distributed.jl"))
+    include(joinpath(@__DIR__, "Threads.jl"))
 end
 
 using .Model: PrivateKey, PublicKey, Signature, Hash, Identity, PrivateKeyPoly, PublicKeyPoly, SignatureShares
@@ -106,7 +105,7 @@ Base.iterate(iter::CustomPublicKeyAndHashIterator, state)
 """
 function verify(sig::Signature, pkhashpairs)
     isempty(pkhashpairs) && error("pkhashpairs is empty")
-    return Spawn.verify(Spawn.OptimalSpawn, sig, pkhashpairs)
+    return Spawn.verify(Spawn.DefaultSpawn, sig, pkhashpairs)
 end
 # mostly for and or simple use cases
 verify(sig::Signature, pk::PublicKey, hash::Hash) = verify(sig, (pk=>hash,))
@@ -164,9 +163,7 @@ Base.Int64(p::Curve.EP2; i=1) = signed(Curve.Limb == UInt64 ? p.x[1][i] : p.x[1]
 Base.Int128(p::Util.Point; i=1) = Int128(Int64(p, i=2i)) << 64 | Int128(Int64(p, i=2i-1))
 
 function __init__()
-    if Spawn.OptimalSpawn == Spawn.SpawnProcesses
-        Spawn.add_processes()
-    end
+    Spawn.add_processes(Config.NPROCS)
     @debug (
         CURVE = Curve.CURVE,
         SMALL_SIGNATURES = Config.SMALL_SIGNATURES,

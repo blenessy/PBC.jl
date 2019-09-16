@@ -75,7 +75,8 @@ The number of configuration possibilities should be limited for simplicity.
 Key | Default | Description
 --- | --- | ---
 `RELIC_TOOLKIT_CURVE` | (all curves are loaded) | Used for limiting, which curve is loaded (saves memory) at startup. Possible values are: `BN254` and `BLS381`.
-`PBC_THREADS` | `1` | Used for enabling parallel computations where possible (`auto` uses all cores).
+`JULIA_NUM_THREADS` | `1` | Used for enabling parallelims over multiple *threads* (default).
+`PBC_NPROCS` | `1` | Used for enabling parallelims over multiple *processes* where possible (`auto` uses all cores).
 `PBC_SMALL_SIGNATURES` | `n` | Enable with `y`, in which case signatures will be smalles and public key bigger.
 
 # Contibutions

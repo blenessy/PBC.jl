@@ -1,12 +1,10 @@
 import Distributed
 
-function add_processes()
-    choice = get(ENV, "PBC_THREADS", "1")
-    n = choice == "auto" ? Sys.CPU_THREADS : parse(Int, choice)
-    n >= 1 || error("invalid number of threads specified: $n")
-    if Distributed.nprocs() < n
-        @info "Starting $(n-1) more processes ..."
-        Distributed.addprocs(n - 1)
+function add_processes(count)
+    count -= Distributed.nprocs()
+    if count > 0
+        @info "Starting $count more processes ..."
+        Distributed.addprocs(count)
     end
 end
 

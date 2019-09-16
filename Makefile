@@ -1,13 +1,14 @@
 CURVE ?= BLS381
 SMALL_SIGNATURES ?= n
-THREADS ?= 4
+NPROCS ?= 1
+NTHREADS ?= 4
 
 .PHONY: test
 test: clean
 	@echo "== Single Threaded =="
 	JULIA_DEBUG=PBC PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) julia --compiled-modules=no --track-allocation=user -e 'import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
 	@echo "== Multi Threaded =="
-	JULIA_DEBUG=PBC PBC_THREADS=$(THREADS) PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) julia --compiled-modules=no --track-allocation=user -e 'import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
+	JULIA_DEBUG=PBC PBC_NPROCS=$(NPROCS) JULIA_NUM_THREADS=$(NTHREADS) PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) julia --compiled-modules=no --track-allocation=user -e 'import Pkg; Pkg.activate("."); Pkg.test(coverage=true)'
 
 .PHONY: coverage
 coverage:
@@ -19,7 +20,7 @@ coverage:
 
 .PHONY: bench
 bench:
-	PBC_THREADS=$(THREADS) PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) TEST=PerfTests julia --compiled-modules=no -e 'import Pkg; Pkg.activate("."); Pkg.test()'
+	PBC_NPROCS=$(NPROCS) JULIA_NUM_THREADS=$(NTHREADS) PBC_SMALL_SIGNATURES=$(SMALL_SIGNATURES) RELIC_TOOLKIT_CURVE=$(CURVE) TEST=PerfTests julia --compiled-modules=no -e 'import Pkg; Pkg.activate("."); Pkg.test()'
 
 .PHONY: profile
 profile:

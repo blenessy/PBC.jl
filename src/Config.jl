@@ -1,5 +1,7 @@
 const SMALL_SIGNATURES = get(ENV, "PBC_SMALL_SIGNATURES", "n") == "y"
 const SMALL_IDENTITIES = get(ENV, "PBC_SMALL_IDENTITIES", "y") == "y"
+const NPROCS = get(ENV, "PBC_NPROCS", "") == "auto" ? Sys.CPU_THREADS : parse(Int, get(ENV, "PBC_NPROCS", "1"))
+const BATCH_SIZE = Threads.nthreads() * parse(Int, get(ENV, "PBC_BATCH_SCALE_FACTOR", "1024"))
 
 macro EP()
     return SMALL_SIGNATURES ? :(Curve.EP) : :(Curve.EP2)
